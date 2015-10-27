@@ -28,29 +28,30 @@ import org.jgroups.util.Util;
 public class ReplStack extends ReceiverAdapter{
     JChannel channel;
     String user_name=System.getProperty("user.name", "n/a");
-    final List<Address> state=new LinkedList<>();
-    final Stack<String> stackString;
+    final Stack stackString;
     
     ReplStack(){
         stackString = new Stack<>();
     }
-    private void push(String element){
+    private <E> void push(E element){
         synchronized(stackString){
             stackString.add(element);
         }
     }
-    private String pop(){
+    private <E> E pop(){
         synchronized(stackString){
-            return stackString.pop();
+            return (E) stackString.pop();
         }
     }
-    private String top(){
+    private <E> E top(){
         synchronized(stackString){
-               return stackString.peek();
+               return (E) stackString.peek();
         }
     }
+    
+    
+    
     private void start() throws Exception {
-//        state.add(0, null);
         channel=new JChannel();
         channel.setReceiver(this);
         channel.connect("ChatCluster");
@@ -66,9 +67,7 @@ public class ReplStack extends ReceiverAdapter{
     
     private void handleMsg(String msg){
         if(msg.startsWith("pop")){
-            String pop = pop();
-            System.out.println("Something popped! " + pop);
-            System.out.println("Top : " + top());
+            pop();
         }
         else {
             push(msg);
@@ -107,7 +106,7 @@ public class ReplStack extends ReceiverAdapter{
                     break;
                 if(line.startsWith("top")){
                     System.out.print(">> top : ");
-                    System.out.println(top());
+                    System.out.println((String)top());
                 }
                 else {
                     Message msg=new Message(null, null, line);
