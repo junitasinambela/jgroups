@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
+import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
@@ -27,26 +28,32 @@ import org.jgroups.util.Util;
 public class ReplStack extends ReceiverAdapter{
     JChannel channel;
     String user_name=System.getProperty("user.name", "n/a");
-    final List<String> state=new LinkedList<>();
-    public Stack<String> stackString;
+    final List<Address> state=new LinkedList<>();
+    final Stack<String> stackString;
     
     ReplStack(){
-        stackString = null;
+        stackString = new Stack<>();
     }
     private void push(String element){
-        stackString.add(element);
+        synchronized(stackString){
+            stackString.add(element);
+        }
     }
     private String pop(){
-        return stackString.pop();
+        synchronized(stackString){
+            return stackString.pop();
+        }
     }
     private String top(){
-        return stackString.peek();
+        synchronized(stackString){
+            return stackString.peek();
+        }
     }
     private void start() throws Exception {
+        state.add(0, null);
         channel=new JChannel();
         channel.setReceiver(this);
         channel.connect("ChatCluster");
-        channel.getState(null, 10000);
         eventLoop();
         channel.close();
     }
@@ -58,32 +65,34 @@ public class ReplStack extends ReceiverAdapter{
 
 //    @Override
 //    public void receive(Message msg) {
-//        String line=msg.getSrc() + ": " + msg.getObject();
-//        System.out.println(line);
-//        synchronized(state) {
-//            state.add(line);
+//        Address a = msg.getSrc();
+//        synchronized(state){
+//            state.add(0, a);
 //        }
 //    }
+    
     @Override
     public void getState(OutputStream output) throws Exception {
-        synchronized(state) {
-            Util.objectToStream(state, new DataOutputStream(output));
+//        channel.startFlush(true);
+        synchronized(stackString) {
+            Util.objectToStream(stackString, new DataOutputStream(output));
         }
+//        channel.stopFlush();
     }
     
     @Override
     public void setState(InputStream input) throws Exception {
-        List<String> list;
-        list=(List<String>)Util.objectFromStream(new DataInputStream(input));
-        for(String a : list){
-            stackString.push(a);
-        }
-        synchronized(state) {
-            state.clear();
-            state.addAll(stackString);
+        Stack<String> list;
+        list=(Stack<String>)Util.objectFromStream(new DataInputStream(input));
+        synchronized(stackString) {
+            stackString.clear();
+            stackString.addAll(list);
         }
     }
-    private void eventLoop() {
+    private void eventLoop() throws Exception {
+//        synchronized(state){
+            channel.getState(null, 10000);
+//        }
         BufferedReader in=new BufferedReader(new InputStreamReader(System.in));
         while(true) {
             try {
@@ -92,7 +101,19 @@ public class ReplStack extends ReceiverAdapter{
                 String line = in.readLine().toLowerCase();
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
-                
+                if(line.startsWith("pop")){
+                    System.out.print(">> pop : ");
+                    System.out.println(pop());
+                }
+                else if(line.startsWith("top")){
+                    System.out.print(">> top : ");
+                    System.out.println(top());
+                }
+                else {
+                    push(line);
+//                    Message msg=new Message(null, null, "");
+//                    channel.send(msg);
+                }
             }
             catch(Exception e) {
                 
