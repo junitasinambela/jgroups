@@ -11,12 +11,10 @@ import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
-import org.jgroups.Address;
+import java.util.HashSet;
+import java.util.Set;
 import org.jgroups.JChannel;
+import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 import org.jgroups.util.Util;
@@ -28,71 +26,57 @@ import org.jgroups.util.Util;
 public class ReplSet extends ReceiverAdapter{
     JChannel channel;
     String user_name=System.getProperty("user.name", "n/a");
-    final List<Address> state=new LinkedList<>();
-    final List<String> stackString;
+    final Set replSet;
     
     ReplSet(){
-        stackString = new ArrayList<>();
+        replSet = new HashSet();
     }
-    private boolean add(String element){
-        synchronized(stackString){
-            return stackString.add(element);
-        }
-    }
-    private boolean contains(String element){
-        synchronized(stackString){
-            return stackString.contains(element);
-        }
-    }
-    private boolean remove(String element){
-        synchronized(stackString){
-            return stackString.remove(element);
-        }
-    }
+    
     private void start() throws Exception {
-        state.add(0, null);
         channel=new JChannel();
         channel.setReceiver(this);
-        channel.connect("ChatCluster");
+        channel.connect("SetCluster");
+        channel.getState(null, 10000);
         eventLoop();
         channel.close();
     }
     
-    @Override
     public void viewAccepted(View new_view) {
         System.out.println("** view: " + new_view);
     }
-
-//    @Override
-//    public void receive(Message msg) {
-//        Address a = msg.getSrc();
-//        synchronized(state){
-//            state.add(0, a);
-//        }
-//    }
     
-    @Override
     public void getState(OutputStream output) throws Exception {
-//        channel.startFlush(true);
-        synchronized(stackString) {
-            Util.objectToStream(stackString, new DataOutputStream(output));
+        synchronized(replSet) {
+            Util.objectToStream(replSet, new DataOutputStream(output));
         }
-//        channel.stopFlush();
     }
     
-    @Override
     public void setState(InputStream input) throws Exception {
-        Stack<String> list;
-        list=(Stack<String>)Util.objectFromStream(new DataInputStream(input));
-        synchronized(stackString) {
-            stackString.clear();
-            stackString.addAll(list);
+        Set list;
+        list=(Set)Util.objectFromStream(new DataInputStream(input));
+        synchronized(replSet) {
+            replSet.clear();
+            replSet.addAll(list);
         }
     }
+    
+    public void receive(Message msg) {
+        String command = (String) msg.getObject();
+        String element = command.split(" ",2)[1];
+        
+        if(command.startsWith("add")) {
+            add(element);
+            System.out.println("Received add command, ReplSet :" + replSet.toString());
+            System.out.print("> ");
+        } else if (command.startsWith("remove")) {
+            remove(element);
+            System.out.println("Received remove command, ReplSet :" + replSet.toString());
+            System.out.print("> ");
+        }
+
+    }
+    
     private void eventLoop() throws Exception {
-//        synchronized(state){
-            channel.getState(null, 10000);
-//        }
         BufferedReader in=new BufferedReader(new InputStreamReader(System.in));
         while(true) {
             try {
@@ -101,26 +85,53 @@ public class ReplSet extends ReceiverAdapter{
                 String line = in.readLine().toLowerCase();
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
-                if(line.startsWith("contains")){
-                    String[] l = line.split("contains", 2);
-                    System.out.println(contains(l[1]));
+                if(line.startsWith("add")){
+                    String[] l = line.split("add", 2);
+                    //System.out.println("add " + l[1]);
+                    Message msg = new Message(null, null, line);
+                    channel.send(msg);
                 }
                 else if(line.startsWith("remove")){
                     String[] l = line.split("remove", 2);
-                    System.out.println(remove(l[1]));
+                    //System.out.println("remove " + l[1]);
+                    Message msg = new Message(null, null, line);
+                    channel.send(msg);
+                }
+                else if(line.startsWith("contains")) {
+                    String[] l = line.split(" ",2);
+                    System.out.println(contains(l[1]));
                 }
                 else {
-                    add(line);
-//                    Message msg=new Message(null, null, "");
-//                    channel.send(msg);
+                    System.out.println("Usage : ");
+                    System.out.println("- add <element>");
+                    System.out.println("- remove <element>");
+                    System.out.println("- contains <element>");
+                    System.out.println("- quit/exit");
                 }
+                
             }
             catch(Exception e) {
                 
             }
         }
     }
-
+    
+    private <E> boolean add(E element){
+        synchronized(replSet){
+            return replSet.add(element);
+        }
+    }
+    private <E> boolean contains(E element){
+        synchronized(replSet){
+            return replSet.contains(element);
+        }
+    }
+    private <E> boolean remove(E element){
+        synchronized(replSet){
+            return replSet.remove(element);
+        }
+    }
+    
     public static void main(String[] args) throws Exception {
         new ReplSet().start();
     }
