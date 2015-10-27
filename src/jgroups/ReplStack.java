@@ -46,14 +46,15 @@ public class ReplStack extends ReceiverAdapter{
     }
     private String top(){
         synchronized(stackString){
-            return stackString.peek();
+               return stackString.peek();
         }
     }
     private void start() throws Exception {
-        state.add(0, null);
+//        state.add(0, null);
         channel=new JChannel();
         channel.setReceiver(this);
         channel.connect("ChatCluster");
+        channel.getState(null, 10000);
         eventLoop();
         channel.close();
     }
@@ -63,21 +64,23 @@ public class ReplStack extends ReceiverAdapter{
         System.out.println("** view: " + new_view);
     }
 
-//    @Override
-//    public void receive(Message msg) {
-//        Address a = msg.getSrc();
-//        synchronized(state){
-//            state.add(0, a);
-//        }
-//    }
+    @Override
+    public void receive(Message msg) {
+        String a = (String) msg.getObject();
+        if(a.startsWith("pop")){
+            String pop = pop();
+            System.out.println("Something popped! " + pop);
+        }
+        else {
+            push(a);
+        }
+    }
     
     @Override
     public void getState(OutputStream output) throws Exception {
-//        channel.startFlush(true);
         synchronized(stackString) {
             Util.objectToStream(stackString, new DataOutputStream(output));
         }
-//        channel.stopFlush();
     }
     
     @Override
@@ -89,10 +92,7 @@ public class ReplStack extends ReceiverAdapter{
             stackString.addAll(list);
         }
     }
-    private void eventLoop() throws Exception {
-//        synchronized(state){
-            channel.getState(null, 10000);
-//        }
+    private void eventLoop(){
         BufferedReader in=new BufferedReader(new InputStreamReader(System.in));
         while(true) {
             try {
@@ -101,18 +101,16 @@ public class ReplStack extends ReceiverAdapter{
                 String line = in.readLine().toLowerCase();
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
-                if(line.startsWith("pop")){
-                    System.out.print(">> pop : ");
-                    System.out.println(pop());
-                }
-                else if(line.startsWith("top")){
+                if(line.startsWith("top")){
                     System.out.print(">> top : ");
                     System.out.println(top());
                 }
                 else {
-                    push(line);
-//                    Message msg=new Message(null, null, "");
-//                    channel.send(msg);
+                    if(!line.startsWith("pop")){
+                        push(line);
+                    }
+                    Message msg=new Message(null, null, line);
+                    channel.send(msg);
                 }
             }
             catch(Exception e) {
