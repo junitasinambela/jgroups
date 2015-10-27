@@ -11,12 +11,12 @@ import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 import org.jgroups.Address;
 import org.jgroups.JChannel;
-import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 import org.jgroups.util.Util;
@@ -25,28 +25,28 @@ import org.jgroups.util.Util;
  *
  * @author user
  */
-public class ReplStack extends ReceiverAdapter{
+public class ReplSet extends ReceiverAdapter{
     JChannel channel;
     String user_name=System.getProperty("user.name", "n/a");
     final List<Address> state=new LinkedList<>();
-    final Stack<String> stackString;
+    final List<String> stackString;
     
-    ReplStack(){
-        stackString = new Stack<>();
+    ReplSet(){
+        stackString = new ArrayList<>();
     }
-    private void push(String element){
+    private boolean add(String element){
         synchronized(stackString){
-            stackString.add(element);
+            return stackString.add(element);
         }
     }
-    private String pop(){
+    private boolean contains(String element){
         synchronized(stackString){
-            return stackString.pop();
+            return stackString.contains(element);
         }
     }
-    private String top(){
+    private boolean remove(String element){
         synchronized(stackString){
-            return stackString.peek();
+            return stackString.remove(element);
         }
     }
     private void start() throws Exception {
@@ -101,16 +101,16 @@ public class ReplStack extends ReceiverAdapter{
                 String line = in.readLine().toLowerCase();
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
-                if(line.startsWith("pop")){
-                    System.out.print(">> pop : ");
-                    System.out.println(pop());
+                if(line.startsWith("contains")){
+                    String[] l = line.split("contains", 2);
+                    System.out.println(contains(l[1]));
                 }
-                else if(line.startsWith("top")){
-                    System.out.print(">> top : ");
-                    System.out.println(top());
+                else if(line.startsWith("remove")){
+                    String[] l = line.split("remove", 2);
+                    System.out.println(remove(l[1]));
                 }
                 else {
-                    push(line);
+                    add(line);
 //                    Message msg=new Message(null, null, "");
 //                    channel.send(msg);
                 }
@@ -122,6 +122,6 @@ public class ReplStack extends ReceiverAdapter{
     }
 
     public static void main(String[] args) throws Exception {
-        new ReplStack().start();
+        new ReplSet().start();
     }
 }
