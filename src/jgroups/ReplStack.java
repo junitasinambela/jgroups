@@ -63,17 +63,21 @@ public class ReplStack extends ReceiverAdapter{
     public void viewAccepted(View new_view) {
         System.out.println("** view: " + new_view);
     }
-
+    
+    private void handleMsg(String msg){
+        if(msg.startsWith("pop")){
+            String pop = pop();
+            System.out.println("Something popped! " + pop);
+            System.out.println("Top : " + top());
+        }
+        else {
+            push(msg);
+        }
+    }
     @Override
     public void receive(Message msg) {
         String a = (String) msg.getObject();
-        if(a.startsWith("pop")){
-            String pop = pop();
-            System.out.println("Something popped! " + pop);
-        }
-        else {
-            push(a);
-        }
+        handleMsg(a);
     }
     
     @Override
@@ -106,9 +110,6 @@ public class ReplStack extends ReceiverAdapter{
                     System.out.println(top());
                 }
                 else {
-                    if(!line.startsWith("pop")){
-                        push(line);
-                    }
                     Message msg=new Message(null, null, line);
                     channel.send(msg);
                 }
