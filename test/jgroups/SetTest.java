@@ -6,6 +6,7 @@ package jgroups;
  * and open the template in the editor.
  */
 
+import jgroups.main.ReplSet;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -38,9 +39,33 @@ public class SetTest {
     public void tearDown() {
     }
 
-    // TODO add test methods here.
-    // The methods must be annotated with annotation @Test. For example:
-    //
-    // @Test
-    // public void hello() {}
+    @Test
+    public void testSet() {
+        ReplSet set1 = new ReplSet();
+        ReplSet set2 = new ReplSet();
+        try {
+            set1.init();
+            Thread.sleep(5000);
+            set1.handleCommand("add a");
+            Thread.sleep(1000);
+            set1.handleCommand("add b");
+            Thread.sleep(1000);
+            set2.init();
+            Thread.sleep(5000);
+            assertEquals("check set2 getState", true, set2.contains("b"));
+            set2.handleCommand("add c");
+            Thread.sleep(1000);
+            set2.handleCommand("remove a");
+            Thread.sleep(1000);
+            assertEquals("check remove message", false, set1.contains("a"));
+            assertEquals("check add message", true, set1.contains("c"));
+        } catch (Exception ex) {
+            
+        } finally {
+            set1.close();
+            set2.close();
+        }
+        
+        
+    }
 }

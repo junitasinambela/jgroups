@@ -28,17 +28,24 @@ public class ReplSet extends ReceiverAdapter{
     String user_name=System.getProperty("user.name", "n/a");
     final Set replSet;
     
-    ReplSet(){
+    public ReplSet(){
         replSet = new HashSet();
     }
     
-    private void start() throws Exception {
+    public void init() throws Exception {
         channel=new JChannel();
         channel.setReceiver(this);
         channel.connect("SetCluster");
         channel.getState(null, 10000);
-        eventLoop();
+    }
+    
+    public void close () {
         channel.close();
+    }
+    private void start() throws Exception {
+        init();
+        eventLoop();
+        close();
     }
     
     public void viewAccepted(View new_view) {
@@ -86,16 +93,10 @@ public class ReplSet extends ReceiverAdapter{
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
                 if(line.startsWith("add")){
-                    String[] l = line.split("add", 2);
-                    //System.out.println("add " + l[1]);
-                    Message msg = new Message(null, null, line);
-                    channel.send(msg);
+                    handleCommand(line);
                 }
                 else if(line.startsWith("remove")){
-                    String[] l = line.split("remove", 2);
-                    //System.out.println("remove " + l[1]);
-                    Message msg = new Message(null, null, line);
-                    channel.send(msg);
+                    handleCommand(line);
                 }
                 else if(line.startsWith("contains")) {
                     String[] l = line.split(" ",2);
@@ -116,17 +117,22 @@ public class ReplSet extends ReceiverAdapter{
         }
     }
     
-    private <E> boolean add(E element){
+    public void handleCommand(String line) throws Exception {
+        Message msg = new Message(null, null, line);
+        channel.send(msg);
+    }
+    
+    public <E> boolean add(E element){
         synchronized(replSet){
             return replSet.add(element);
         }
     }
-    private <E> boolean contains(E element){
+    public <E> boolean contains(E element){
         synchronized(replSet){
             return replSet.contains(element);
         }
     }
-    private <E> boolean remove(E element){
+    public <E> boolean remove(E element){
         synchronized(replSet){
             return replSet.remove(element);
         }
