@@ -11,10 +11,7 @@ import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Stack;
-import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
@@ -30,32 +27,35 @@ public class ReplStack extends ReceiverAdapter{
     String user_name=System.getProperty("user.name", "n/a");
     final Stack stackString;
     
-    ReplStack(){
+    public ReplStack(){
         stackString = new Stack<>();
     }
-    private <E> void push(E element){
+    public <E> void push(E element){
         synchronized(stackString){
             stackString.add(element);
         }
     }
-    private <E> E pop(){
+    public <E> E pop(){
         synchronized(stackString){
             return (E) stackString.pop();
         }
     }
-    private <E> E top(){
+    public <E> E top(){
         synchronized(stackString){
                return (E) stackString.peek();
         }
     }
     
     
-    
-    private void start() throws Exception {
+    public void init() throws Exception{
         channel=new JChannel();
         channel.setReceiver(this);
         channel.connect("ChatCluster");
         channel.getState(null, 10000);
+    }
+    
+    private void start() throws Exception {
+        init();
         eventLoop();
         channel.close();
     }
@@ -104,18 +104,22 @@ public class ReplStack extends ReceiverAdapter{
                 String line = in.readLine().toLowerCase();
                 if(line.startsWith("quit") || line.startsWith("exit"))
                     break;
-                if(line.startsWith("top")){
-                    System.out.print(">> top : ");
-                    System.out.println((String)top());
-                }
-                else {
-                    Message msg=new Message(null, null, line);
-                    channel.send(msg);
-                }
+                handleCmd(line);
             }
             catch(Exception e) {
                 
             }
+        }
+    }
+    
+    public void handleCmd(String line) throws Exception{
+        if(line.startsWith("top")){
+            System.out.print(">> top : ");
+            System.out.println((String)top());
+        }
+        else {
+            Message msg=new Message(null, null, line);
+            channel.send(msg);
         }
     }
 
