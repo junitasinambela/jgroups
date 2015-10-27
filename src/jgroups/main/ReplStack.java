@@ -57,7 +57,7 @@ public class ReplStack extends ReceiverAdapter{
     private void start() throws Exception {
         init();
         eventLoop();
-        channel.close();
+        closeConn();
     }
     
     @Override
@@ -121,6 +121,10 @@ public class ReplStack extends ReceiverAdapter{
             Message msg=new Message(null, null, line);
             channel.send(msg);
         }
+    }
+    
+    public void closeConn(){
+        channel.close();
     }
 
     public static void main(String[] args) throws Exception {
