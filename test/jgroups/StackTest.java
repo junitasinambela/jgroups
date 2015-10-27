@@ -50,18 +50,27 @@ public class StackTest {
         ReplStack rep2 = new ReplStack();
         try {
             rep1.init();
+            Thread.sleep(1000);
             rep1.handleCmd("aaaaaa");
-            assertEquals("aaaaaa", (String)rep1.top());
+            Thread.sleep(1000);
+            assertEquals("Checking top 1 : ", "aaaaaa", (String)rep1.top());
             rep1.handleCmd("aaaaaahhhhhh hhhh");
-            assertEquals("aaaaaahhhhhh hhhh", (String)rep1.top());
+            Thread.sleep(1000);
+            assertEquals("Checking top 1 : ", "aaaaaahhhhhh hhhh", (String)rep1.top());
             rep1.handleCmd("pop");
-            assertEquals("aaaaaa", (String)rep1.top());
+            Thread.sleep(1000);
+            assertEquals("Checking top 1 : ", "aaaaaa", (String)rep1.top());
             rep1.handleCmd("aaaaaahhhhhh hhhh");
+            Thread.sleep(1000);
             rep2.init();
-            assertEquals("aaaaaahhhhhh hhhh", (String)rep2.top());
+            Thread.sleep(1000);
+            assertEquals("Checking top 2 : ", "aaaaaahhhhhh hhhh", (String)rep2.top());
             rep2.handleCmd("pop");
-            assertEquals("aaaaaa", (String)rep1.top());
-            assertEquals("salah","aaaaa", (String)rep2.top());
+            Thread.sleep(1000);
+            assertEquals("Checking top 1 : ", "aaaaaa", (String)rep1.top());
+            assertEquals("Checking top 2 : ", "aaaaaa", (String)rep2.top());
+            rep1.closeConn();
+            rep2.closeConn();
         } catch (Exception ex) {
             
         }
